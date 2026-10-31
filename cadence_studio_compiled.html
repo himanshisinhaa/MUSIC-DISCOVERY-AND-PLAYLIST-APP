@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101411">
+  <meta name="description" content="Cadence Studio — your personal Spotify music workspace">
+  <title>Cadence Studio | Music Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg: #101411;
+      --panel: #171c18;
+      --panel-2: #1d241f;
+      --panel-3: #242d26;
+      --line: rgba(255,255,255,.09);
+      --text: #f1f4ef;
+      --muted: #a0aaa1;
+      --accent: #b7f397;
+      --accent-dark: #1e3221;
+      --danger: #ff9b9b;
+      --radius: 18px;
+      --shadow: 0 18px 60px rgba(0,0,0,.18);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "DM Sans", sans-serif; font-size: 14px; }
+    body.modal-open { overflow: hidden; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; }
+    .app-frame { width: min(1600px, 100%); margin: auto; padding: 0 30px 24px; }
+    .navbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 50; background: rgba(16,20,17,.94); backdrop-filter: blur(18px); }
+    .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: #111811; background: var(--accent); font-size: 25px; }
+    .brand-name { display: flex; flex-direction: column; line-height: 1.05; }
+    .brand-name strong { font-size: 17px; letter-spacing: -.7px; }
+    .brand-name span { font-size: 9px; letter-spacing: 3px; color: var(--muted); margin-top: 5px; }
+    .main-nav { display: flex; align-items: center; gap: 6px; }
+    .nav-link { color: var(--muted); padding: 10px 13px; border-radius: 10px; font-size: 12px; transition: .2s ease; }
+    .nav-link:hover, .nav-link.active { color: var(--text); background: var(--panel-2); }
+    .nav-link.active { box-shadow: inset 0 -2px var(--accent); }
+    .now-playing { display: flex; align-items: center; gap: 11px; min-width: 210px; max-width: 330px; }
+    .now-label { font-size: 8px; letter-spacing: 1.5px; color: var(--accent); white-space: nowrap; }
+    .playing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .now-playing-info { min-width: 0; }
+    .now-playing-info h3, .now-playing-info p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .now-playing-info h3 { font-size: 12px; font-weight: 700; }
+    .now-playing-info p { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    #playbackStatus { color: var(--muted); font-size: 9px; }
+    #currentTrackCover { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+    .avatar { width: 35px; height: 35px; border-radius: 50%; background: var(--accent-dark); border: 1px solid rgba(183,243,151,.4); color: var(--accent); display: grid; place-items: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+    main { padding-top: 18px; }
+    .search-discovery-area { margin-bottom: 20px; position: relative; }
+    .search-container { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); padding: 7px 8px 7px 16px; border-radius: 13px; max-width: 750px; margin: auto; }
+    .search-icon { color: var(--accent); font-size: 23px; }
+    #searchInput { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--text); background: transparent; padding: 9px 0; }
+    #searchInput::placeholder { color: #7f8981; }
+    #searchButton { border: 0; border-radius: 9px; padding: 11px 17px; background: var(--accent); color: #111811; font-size: 10px; font-weight: 800; letter-spacing: .7px; }
+    #searchButton:hover { filter: brightness(1.08); }
+    #searchButton:disabled { opacity: .6; cursor: wait; }
+    .search-results { position: relative; z-index: 10; max-width: 750px; margin: 10px auto 0; }
+    .status-message { color: var(--muted); font-size: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+    .hero-section { display: grid; grid-template-columns: 1.05fr .95fr; gap: 22px; align-items: stretch; margin-bottom: 25px; }
+    .hero-copy { min-height: 230px; padding: 24px 28px; border: 1px solid var(--line); border-radius: var(--radius); background: radial-gradient(ellipse at 5% 0%, rgba(183,243,151,.10), transparent 60%), var(--panel); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+    .session-label, .section-label, .story-eyebrow { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: 1.7px; }
+    .hero-copy h1 { font-family: "Playfair Display", serif; font-size: clamp(30px, 3.1vw, 48px); line-height: 1.02; letter-spacing: -1.4px; font-weight: 500; margin: 14px 0 9px; }
+    .hero-copy h1 em { color: var(--accent); font-weight: 500; }
+    .hero-copy > p { color: var(--muted); line-height: 1.6; font-size: 12px; max-width: 420px; margin: 0 0 17px; }
+    .hero-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn, .new-playlist { border: 1px solid var(--line); border-radius: 10px; padding: 10px 13px; font-size: 10px; font-weight: 800; letter-spacing: .35px; display: inline-flex; gap: 8px; align-items: center; justify-content: center; transition: transform .2s ease, filter .2s ease; }
+    .btn-dark { color: #101710; background: var(--accent); border-color: var(--accent); }
+    .btn-light, .new-playlist { color: var(--text); background: var(--panel-2); }
+    .btn:hover, .new-playlist:hover { transform: translateY(-1px); }
+    .player-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; background: linear-gradient(140deg, #202920, #171c18 70%); display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+    .player-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .player-top h3 { margin: 0 0 5px; font-size: 16px; overflow-wrap: anywhere; }
+    .player-top p { color: var(--muted); font-size: 11px; margin: 0; }
+    .duration { color: var(--accent); font-size: 9px; letter-spacing: 1.3px; }
+    .visualizer { display: flex; align-items: center; gap: 4px; height: 52px; margin: 15px 0 13px; overflow: hidden; }
+    .visualizer span { flex: 1; min-width: 2px; border-radius: 5px; background: var(--accent); opacity: .7; }
+    .visualizer.is-playing span { animation: wave .8s ease-in-out infinite alternate; }
+    .visualizer.is-playing span:nth-child(3n) { animation-delay: .2s; }
+    .visualizer.is-playing span:nth-child(2n) { animation-delay: .4s; }
+    @keyframes wave { from { transform: scaleY(.35); } to { transform: scaleY(1); } }
+    .player-controls { display: flex; align-items: center; gap: 13px; }
+    .play-button { width: 37px; height: 37px; border: 0; border-radius: 50%; background: var(--accent); color: #111811; font-size: 15px; flex-shrink: 0; }
+    .track-line { height: 4px; border-radius: 5px; background: #394139; flex: 1; overflow: hidden; }
+    .track-progress { height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .3s ease; }
+    .player-note { margin: 12px 0 0; font-size: 9px; color: #859087; line-height: 1.5; }
+    .playlist-section, .discovery-section, .overview-section { margin: 0 0 26px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 15px; margin-bottom: 13px; }
+    .section-heading h2 { font-family: "Playfair Display", serif; font-weight: 500; font-size: 25px; letter-spacing: -.5px; margin: 5px 0 0; }
+    .section-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+    #spotifyPlaylists { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+    #spotifyPlaylists > p { color: var(--muted); grid-column: 1 / -1; padding: 22px; border-radius: 13px; background: var(--panel); margin: 0; }
+    #spotifyPlaylists > * { min-width: 0; overflow: hidden; }
+    #spotifyPlaylists img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 11px; background: var(--panel-2); }
+    #spotifyPlaylists h3, #spotifyPlaylists h4, #spotifyPlaylists strong { font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+    #spotifyPlaylists p { color: var(--muted); font-size: 10px; line-height: 1.5; }
+    #spotifyPlaylists button { max-width: 100%; border-radius: 8px; padding: 7px 9px; border: 1px solid var(--line); color: var(--text); background: var(--panel-2); font-size: 10px; }
+    .discovery-container, .artists-container { min-width: 0; }
+    .empty-state { border: 1px dashed rgba(255,255,255,.13); border-radius: 15px; background: rgba(255,255,255,.015); padding: 24px; text-align: center; }
+    .empty-icon { font-size: 25px; color: var(--accent); }
+    .empty-state h3 { margin: 8px 0 5px; font-size: 14px; }
+    .empty-state p { color: var(--muted); margin: 0; font-size: 11px; }
+    .results-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .music-card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); transition: border-color .2s ease, transform .2s ease; }
+    .music-card:hover { border-color: rgba(183,243,151,.45); transform: translateY(-2px); }
+    .music-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 10px; background: var(--panel-2); display: block; }
+    .music-card h3 { font-size: 12px; line-height: 1.4; margin: 10px 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .music-card p { color: var(--muted); font-size: 10px; line-height: 1.45; margin: 0 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-actions { display: flex; gap: 6px; }
+    .card-actions button { flex: 1; min-width: 0; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-size: 10px; }
+    .card-actions button.primary { background: var(--accent); color: #111811; border-color: var(--accent); font-weight: 800; }
+    .listening-story { padding: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+    .story-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+    .story-header h2 { margin: 6px 0; font-family: "Playfair Display", serif; font-weight: 500; font-size: 23px; }
+    .story-header p:not(.story-eyebrow) { margin: 0; color: var(--muted); font-size: 11px; }
+    .story-eyebrow { margin: 0; }
+    #refreshStoryButton { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); padding: 10px 12px; border-radius: 9px; font-size: 10px; }
+    #storyStatus { color: var(--muted); font-size: 10px; margin: 15px 0 10px; }
+    .story-summary { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin-bottom: 12px; }
+    .story-stat { padding: 11px 13px; border-radius: 11px; background: var(--panel-2); }
+    .story-stat strong { display: block; font-size: 21px; color: var(--accent); }
+    .story-stat span { font-size: 10px; color: var(--muted); }
+    .story-columns { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+    .story-panel { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+    .story-panel h3 { font-size: 11px; margin: 0 0 10px; }
+    .story-panel h3 i { color: var(--accent); margin-right: 5px; }
+    .story-list { display: flex; flex-direction: column; gap: 8px; }
+    .story-item { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .story-item img { width: 36px; height: 36px; object-fit: cover; border-radius: 7px; flex-shrink: 0; }
+    .story-item-details { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+    .story-item-details strong, .story-item-details span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .story-item-details strong { font-size: 10px; }
+    .story-item-details span { color: var(--muted); font-size: 9px; }
+    .story-empty { color: var(--muted); font-size: 10px; }
+    .story-footer { display: flex; align-items: center; gap: 9px; margin-top: 13px; color: var(--muted); font-size: 10px; }
+    #storyTimeRange { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 8px; border-radius: 8px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 14px; }
+    .metric-card { padding: 16px; border: 1px solid var(--line); background: var(--panel); border-radius: 14px; min-width: 0; }
+    .metric-card.metric-featured { background: radial-gradient(ellipse at top right, rgba(183,243,151,.12), transparent 60%), var(--panel); }
+    .metric-top { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 9px; letter-spacing: 1px; }
+    .metric-top i { color: var(--accent); font-size: 14px; }
+    .metric-card > strong { display: block; margin: 13px 0 5px; font-size: 27px; overflow-wrap: anywhere; }
+    .metric-card > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .overview-lower-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
+    .overview-panel { padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); min-width: 0; }
+    .overview-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .overview-panel-heading h3 { margin: 5px 0 0; font-family: "Playfair Display", serif; font-size: 20px; font-weight: 500; }
+    .overview-panel-heading > i { color: var(--accent); font-size: 17px; }
+    .genre-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+    .genre-tile { position: relative; text-align: left; min-height: 125px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: linear-gradient(145deg,#27332a,#1b211c); overflow: hidden; }
+    .genre-tile span { display: block; font-size: 8px; color: var(--muted); letter-spacing: .6px; }
+    .genre-tile strong { display: block; margin-top: 14px; font-family: "Playfair Display", serif; font-size: 17px; line-height: 1.1; }
+    .genre-tile i { position: absolute; right: 10px; bottom: 10px; color: var(--accent); font-size: 11px; }
+    .genre-tile:hover { border-color: var(--accent); }
+    .genre-two { background: linear-gradient(145deg,#3a3025,#1b211c); }
+    .genre-three { background: linear-gradient(145deg,#26323a,#1b211c); }
+    .genre-four { background: linear-gradient(145deg,#322b3a,#1b211c); }
+    .quick-action { width: 100%; display: flex; align-items: center; gap: 11px; padding: 11px 0; border: 0; border-bottom: 1px solid var(--line); color: var(--text); background: transparent; text-align: left; }
+    .quick-action:last-child { border-bottom: 0; }
+    .quick-action-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: var(--panel-2); color: var(--accent); flex-shrink: 0; }
+    .quick-action > span:nth-child(2) { flex: 1; min-width: 0; }
+    .quick-action strong, .quick-action small { display: block; }
+    .quick-action strong { font-size: 11px; }
+    .quick-action small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .quick-action > i { color: var(--muted); font-size: 10px; }
+    .quick-action:hover strong { color: var(--accent); }
+    .footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 20px 0 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .footer-brand { display: flex; align-items: center; gap: 8px; color: var(--text); }
+    .footer-brand .music-symbol { color: var(--accent); font-size: 18px; }
+    .footer p { margin: 0; }
+    .playlist-modal[aria-hidden="true"] { display: none; }
+    .playlist-modal[aria-hidden="false"] { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(8px); }
+    .playlist-modal-box { width: min(500px, 100%); max-height: 85vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+    .modal-label { color: var(--accent); font-size: 9px; letter-spacing: 1.5px; }
+    .modal-header h2 { margin: 5px 0 15px; font-family: "Playfair Display", serif; font-weight: 500; }
+    .modal-close { border: 0; background: var(--panel-2); color: var(--text); width: 35px; height: 35px; border-radius: 50%; font-size: 22px; }
+    .selected-track { display: flex; align-items: center; gap: 10px; margin: 8px 0 14px; }
+    .selected-track img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; }
+    .selected-track strong, .selected-track span { display: block; }
+    .selected-track strong { font-size: 12px; }
+    .selected-track span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .modal-playlist-list { display: grid; gap: 8px; }
+    .modal-playlist-list button { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); color: var(--text); text-align: left; }
+    .modal-playlist-list button:hover { border-color: var(--accent); }
+    .modal-playlist-list button i { color: var(--accent); }
+    .modal-playlist-list p { color: var(--muted); font-size: 11px; }
+    .toast-region { position: fixed; right: 20px; bottom: 20px; z-index: 150; display: grid; gap: 8px; width: min(360px, calc(100% - 40px)); }
+    .toast { padding: 12px 14px; border: 1px solid rgba(183,243,151,.25); border-radius: 12px; background: #202920; color: var(--text); font-size: 12px; box-shadow: var(--shadow); animation: toast-in .2s ease-out; }
+    .toast.error { border-color: rgba(255,155,155,.4); }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    [hidden] { display: none !important; }
+    @media (min-width: 1100px) and (min-height: 800px) { .app-frame { padding-left: 36px; padding-right: 36px; } }
+    @media (max-width: 1100px) { .app-frame { padding: 0 20px 22px; } .navbar { gap: 14px; } .now-label { display: none; } #spotifyPlaylists { grid-template-columns: repeat(4,minmax(0,1fr)); } .hero-copy { padding: 22px; } .genre-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .results-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+    @media (max-width: 760px) { .app-frame { padding: 0 14px 18px; } .navbar { min-height: auto; padding: 13px 0; flex-wrap: wrap; } .main-nav { order: 3; width: 100%; overflow-x: auto; } .nav-link { white-space: nowrap; } .now-playing { margin-left: auto; min-width: 0; max-width: 55%; } .now-playing-info { display: none; } .hero-section { grid-template-columns: 1fr; gap: 12px; } .hero-copy { min-height: 210px; } .player-card { padding: 17px; } .section-heading { align-items: flex-start; flex-direction: column; } .section-actions { justify-content: flex-start; } #spotifyPlaylists { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; } .story-columns { grid-template-columns: 1fr; } .story-summary { grid-template-columns: repeat(3,minmax(0,1fr)); } .story-header { align-items: flex-start; } .footer { flex-wrap: wrap; } .metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .overview-lower-grid { grid-template-columns: 1fr; } .results-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 420px) { .brand-name strong { font-size: 15px; } .brand-mark { width: 34px; height: 34px; } .avatar { width: 31px; height: 31px; } .hero-copy h1 { font-size: 34px; } #spotifyPlaylists { grid-template-columns: repeat(2,minmax(0,1fr)); } .story-summary { grid-template-columns: 1fr; } .story-header { flex-direction: column; } .story-footer { flex-wrap: wrap; } .section-heading h2 { font-size: 23px; } #searchButton { padding: 10px; } .metric-grid { grid-template-columns: 1fr 1fr; gap: 8px; } .metric-card { padding: 12px; } .metric-card > strong { font-size: 22px; } .genre-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <header class="navbar">
+      <a href="#home" class="brand" aria-label="Cadence Studio Home">
+        <div class="brand-mark">♪</div>
+        <div class="brand-name"><strong>Cadence</strong><span>STUDIO</span></div>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#library" class="nav-link">Discover</a>
+        <a href="#playlists" class="nav-link active">My playlists</a>
+        <a href="#artists" class="nav-link">Artists</a>
+        <a href="#stats" class="nav-link">Insights</a>
+      </nav>
+      <div class="now-playing">
+        <span class="now-label">NOW PLAYING</span><span class="playing-dot"></span>
+        <div class="now-playing-info">
+          <h3 id="currentSongName">Nothing playing yet</h3>
+          <p id="currentArtist">Choose a track to get started</p>
+          <span id="playbackStatus" aria-live="polite">Not playing</span>
+        </div>
+        <img id="currentTrackCover" alt="Current track cover" hidden>
+        <div class="avatar" id="profileAvatar" aria-label="Spotify profile">YOU</div>
+      </div>
+    </header>
+
+    <main id="home">
+      <section class="search-discovery-area" aria-label="Search Spotify music">
+        <form class="search-container" id="searchForm">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <label class="sr-only" for="searchInput">Search Spotify music</label>
+          <input id="searchInput" type="search" placeholder="Search songs, artists, albums..." autocomplete="off">
+          <button id="searchButton" type="submit">DISCOVER <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+        <div id="searchResults" class="search-results" aria-live="polite"></div>
+      </section>
+
+      <section class="hero-section" aria-label="Welcome and player">
+        <div class="hero-copy">
+          <span class="session-label">YOUR PERSONAL MUSIC WORKSPACE</span>
+          <h1>Find your sound.<br><em>Feel every moment.</em></h1>
+          <p>One space for your Spotify playlists, new discoveries, favorite artists, and listening habits.</p>
+          <div class="hero-buttons">
+            <button class="btn btn-dark" id="startProjectBtn" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Start exploring</button>
+            <button class="btn btn-light" id="browseBtn" type="button"><i class="fa-solid fa-compass"></i> Browse music</button>
+          </div>
+        </div>
+        <div class="player-card">
+          <div class="player-top"><div><h3 id="currentTrack">Ready when you are</h3><p id="playerArtistLabel">Connect Spotify and choose a track</p></div><span class="duration" id="trackDuration">SPOTIFY</span></div>
+          <div class="visualizer" id="visualizer" aria-label="Decorative audio waveform" role="img">
+            <span style="height:22%"></span><span style="height:38%"></span><span style="height:62%"></span><span style="height:85%"></span><span style="height:65%"></span><span style="height:45%"></span><span style="height:73%"></span><span style="height:54%"></span><span style="height:38%"></span><span style="height:27%"></span><span style="height:48%"></span><span style="height:72%"></span><span style="height:58%"></span><span style="height:38%"></span><span style="height:64%"></span><span style="height:48%"></span><span style="height:34%"></span><span style="height:54%"></span><span style="height:69%"></span><span style="height:40%"></span><span style="height:27%"></span><span style="height:51%"></span><span style="height:38%"></span><span style="height:24%"></span>
+          </div>
+          <div class="player-controls"><button class="play-button" id="playButton" type="button" aria-label="Open current track on Spotify" aria-pressed="false">▶</button><div class="track-line"><div class="track-progress" id="trackProgress"></div></div></div>
+          <p class="player-note">Choose a result to open it on Spotify. Full in-page playback requires Spotify Premium and the Web Playback SDK.</p>
+        </div>
+      </section>
+
+      <section class="overview-section" id="overview">
+        <div class="section-heading"><div><span class="section-label">YOUR MUSIC, AT A GLANCE</span><h2>Music overview</h2></div><span class="status-message" id="connectionStatus">Spotify not connected</span></div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-top"><span>YOUR PLAYLISTS</span><i class="fa-solid fa-layer-group"></i></div><strong id="overviewPlaylistCount">—</strong><p>Playlists in your library</p></article>
+          <article class="metric-card"><div class="metric-top"><span>TOP ARTISTS</span><i class="fa-solid fa-microphone-lines"></i></div><strong id="overviewArtistCount">—</strong><p>Artists in your listening story</p></article>
+          <article class="metric-card"><div class="metric-top"><span>TOP TRACKS</span><i class="fa-solid fa-headphones"></i></div><strong id="overviewTrackCount">—</strong><p>Tracks from your taste profile</p></article>
+          <article class="metric-card metric-featured"><div class="metric-top"><span>YOUR MUSIC IDENTITY</span><i class="fa-solid fa-sparkles"></i></div><strong id="overviewMusicIdentity">Discovering</strong><p>Based on your available Spotify data</p></article>
+        </div>
+        <div class="overview-lower-grid">
+          <article class="overview-panel">
+            <div class="overview-panel-heading"><div><span class="section-label">EXPLORE BY VIBE</span><h3>Find your next mood</h3></div><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div class="genre-grid">
+              <button class="genre-tile genre-one" data-genre="indie"><span>01 / ALTERNATIVE</span><strong>Indie<br>escape</strong><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+              <button class="genre-tile genre-two" data-genre="pop"><span>02 / FEEL GOOD</span><strong>Pop<br>energy</strong><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+              <button class="genre-tile genre-three" data-genre="jazz"><span>03 / SLOW DOWN</span><strong>Jazz<br>after dark</strong><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+              <button class="genre-tile genre-four" data-genre="electronic"><span>04 / LATE NIGHT</span><strong>Electronic<br>flow</strong><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+            </div>
+          </article>
+          <article class="overview-panel quick-actions-panel">
+            <div class="overview-panel-heading"><div><span class="section-label">YOUR SHORTCUTS</span><h3>Quick actions</h3></div><i class="fa-solid fa-bolt"></i></div>
+            <button class="quick-action" id="overviewSearchAction"><span class="quick-action-icon"><i class="fa-solid fa-magnifying-glass"></i></span><span><strong>Discover music</strong><small>Search songs and artists</small></span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="quick-action" id="overviewPlaylistAction"><span class="quick-action-icon"><i class="fa-solid fa-list"></i></span><span><strong>Open my playlists</strong><small>Explore your Spotify library</small></span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="quick-action" id="overviewStoryAction"><span class="quick-action-icon"><i class="fa-solid fa-chart-line"></i></span><span><strong>Listening story</strong><small>Explore your top artists and tracks</small></span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="quick-action" id="overviewSyncAction"><span class="quick-action-icon"><i class="fa-solid fa-rotate"></i></span><span><strong>Sync Spotify</strong><small>Refresh your connected data</small></span><i class="fa-solid fa-chevron-right"></i></button>
+          </article>
+        </div>
+      </section>
+
+      <section class="playlist-section" id="playlists">
+        <div class="section-heading"><div><span class="section-label">YOUR CONNECTED ACCOUNT</span><h2>Made for your mood</h2></div><div class="section-actions"><button class="new-playlist" id="newPlaylistBtn" type="button"><i class="fa-solid fa-plus"></i> New playlist</button><button id="spotifyLoginButton" class="btn btn-dark" type="button"><i class="fa-brands fa-spotify"></i> Connect Spotify</button><button id="refreshPlaylists" class="btn btn-light" type="button"><i class="fa-solid fa-rotate"></i> Sync</button></div></div>
+        <div id="spotifyPlaylists" aria-live="polite"><p><i class="fa-brands fa-spotify"></i> Connect Spotify to see your real playlists and cover artwork here.</p></div>
+      </section>
+
+      <section class="discovery-section" id="library">
+        <div class="section-heading"><div><span class="section-label">YOUR NEXT OBSESSION</span><h2>Find your next sound</h2></div></div>
+        <div id="discoveryContainer" class="discovery-container"><div class="empty-state"><span class="empty-icon">♫</span><h3>What are you in the mood for?</h3><p>Search for a song, artist, or album above and discover something new.</p></div></div>
+      </section>
+
+      <section id="artists" class="discovery-section">
+        <div class="section-heading"><div><span class="section-label">YOUR ARTIST UNIVERSE</span><h2>Explore artists</h2></div></div>
+        <div id="artistsContainer" class="artists-container"><div class="empty-state"><span class="empty-icon">♫</span><h3>Your artist universe</h3><p>Search for music to discover artists.</p></div></div>
+      </section>
+
+      <section id="stats" class="discovery-section">
+        <div class="section-heading"><div><span class="section-label">YOUR MUSIC, DECODED</span><h2>Listening insights</h2></div></div>
+        <section class="listening-story" id="listeningStory">
+          <div class="story-header"><div><p class="story-eyebrow">YOUR PERSONAL MUSIC JOURNEY</p><h2>Your Listening Story</h2><p id="storySubtitle">Discover what your listening says about your music taste.</p></div><button type="button" id="refreshStoryButton"><i class="fa-solid fa-rotate"></i> Refresh story</button></div>
+          <p id="storyStatus" role="status" aria-live="polite">Connect Spotify to load your story.</p>
+          <div class="story-summary" id="storySummary"></div>
+          <div class="story-columns">
+            <div class="story-panel"><h3><i class="fa-solid fa-clock-rotate-left"></i> Recently played</h3><div id="recentlyPlayedStory" class="story-list"><p class="story-empty">No recent tracks loaded.</p></div></div>
+            <div class="story-panel"><h3><i class="fa-solid fa-heart"></i> Top artists</h3><div id="topArtistsStory" class="story-list"><p class="story-empty">No artists loaded.</p></div></div>
+            <div class="story-panel"><h3><i class="fa-solid fa-headphones"></i> Top tracks</h3><div id="topTracksStory" class="story-list"><p class="story-empty">No tracks loaded.</p></div></div>
+          </div>
+          <div class="story-footer"><label for="storyTimeRange">Explore your taste over</label><select id="storyTimeRange"><option value="short_term">The last 4 weeks</option><option value="medium_term" selected>The last 6 months</option><option value="long_term">About the last year</option></select></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer"><div class="footer-brand"><span class="music-symbol">♪</span><strong>Cadence Studio</strong></div><p>Compose your moment.</p><span class="footer-copy">© 2026 Cadence Studio</span></footer>
+  </div>
+
+  <div id="playlistModal" class="playlist-modal" aria-hidden="true">
+    <div class="playlist-modal-box" role="dialog" aria-modal="true" aria-labelledby="playlistModalTitle">
+      <div class="modal-header"><div><span class="modal-label">CREATE A PLAYLIST</span><h2 id="playlistModalTitle">New playlist</h2></div><button id="modalClose" class="modal-close" type="button" aria-label="Close">×</button></div>
+      <label for="playlistNameInput">Playlist name</label>
+      <input id="playlistNameInput" type="text" maxlength="100" placeholder="Late night favourites" style="display:block;width:100%;margin:8px 0 12px;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--text)">
+      <label for="playlistDescriptionInput">Description (optional)</label>
+      <input id="playlistDescriptionInput" type="text" maxlength="300" placeholder="A collection for this mood" style="display:block;width:100%;margin:8px 0 14px;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--text)">
+      <button id="createPlaylistConfirm" class="btn btn-dark" type="button"><i class="fa-solid fa-plus"></i> Create playlist</button>
+      <div id="selectedTrack" class="selected-track"></div>
+      <div id="modalPlaylistList" class="modal-playlist-list"><p>Connect Spotify to create a playlist.</p></div>
+    </div>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    "use strict";
+
+    // Add your Spotify Developer Dashboard client ID here before connecting.
+    // The Redirect URI in the Spotify dashboard must exactly match this URL.
+    const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID";
+    const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+    const SPOTIFY_SCOPES = [
+      "user-read-private",
+      "user-read-email",
+      "playlist-read-private",
+      "playlist-read-collaborative",
+      "playlist-modify-public",
+      "playlist-modify-private",
+      "user-top-read",
+      "user-read-recently-played"
+    ];
+    const SPOTIFY_API = "https://api.spotify.com/v1";
+    const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
+    const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
+
+    const state = {
+      accessToken: null,
+      tokenExpiresAt: 0,
+      profile: null,
+      playlists: [],
+      selectedTrack: null,
+      lastResults: [],
+      topArtists: [],
+      topTracks: [],
+      recentTracks: []
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    function showToast(message, type = "success") {
+      const region = $("#toastRegion");
+      const toast = document.createElement("div");
+      toast.className = `toast ${type === "error" ? "error" : ""}`;
+      toast.textContent = message;
+      region.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 4200);
+    }
+
+    function setStatus(message, isError = false) {
+      const node = $("#connectionStatus");
+      node.textContent = message;
+      node.style.color = isError ? "var(--danger)" : "var(--muted)";
+    }
+
+    function escapeHTML(value = "") {
+      return String(value).replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function imageFor(item) {
+      return item?.images?.[0]?.url || item?.album?.images?.[0]?.url || "https://placehold.co/500x500/1d241f/b7f397?text=Cadence";
+    }
+
+    function artistNames(track) {
+      return (track?.artists || []).map((artist) => artist.name).join(", ") || "Unknown artist";
+    }
+
+    function openSpotify(url) {
+      if (!url) {
+        showToast("This item does not have a Spotify link.", "error");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    async function createCodeChallenge(verifier) {
+      const bytes = new TextEncoder().encode(verifier);
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      const hash = Array.from(new Uint8Array(digest)).map((byte) => String.fromCharCode(byte)).join("");
+      return btoa(hash).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function randomString(length = 64) {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+      const values = crypto.getRandomValues(new Uint8Array(length));
+      return Array.from(values, (value) => chars[value % chars.length]).join("");
+    }
+
+    async function loginWithSpotify() {
+      if (SPOTIFY_CLIENT_ID === "YOUR_SPOTIFY_CLIENT_ID") {
+        showToast("Add your Spotify Client ID in the code before connecting.", "error");
+        return;
+      }
+      try {
+        const verifier = randomString(64);
+        const challenge = await createCodeChallenge(verifier);
+        sessionStorage.setItem("cadence_pkce_verifier", verifier);
+        const params = new URLSearchParams({
+          client_id: SPOTIFY_CLIENT_ID,
+          response_type: "code",
+          redirect_uri: SPOTIFY_REDIRECT_URI,
+          code_challenge_method: "S256",
+          code_challenge: challenge,
+          scope: SPOTIFY_SCOPES.join(" ")
+        });
+        window.location.assign(`${AUTH_ENDPOINT}?${params.toString()}`);
+      } catch (error) {
+        console.error(error);
+        showToast("Could not start Spotify login. Use localhost or HTTPS.", "error");
+      }
+    }
+
+    async function exchangeAuthorizationCode() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const authError = params.get("error");
+      if (authError) {
+        showToast(`Spotify login cancelled: ${authError}`, "error");
+        window.history.replaceState({}, document.title, SPOTIFY_REDIRECT_URI);
+        return;
+      }
+      if (!code) return;
+      const verifier = sessionStorage.getItem("cadence_pkce_verifier");
+      if (!verifier) {
+        showToast("Login session expired. Please connect Spotify again.", "error");
+        window.history.replaceState({}, document.title, SPOTIFY_REDIRECT_URI);
+        return;
+      }
+      try {
+        const response = await fetch(TOKEN_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: SPOTIFY_CLIENT_ID,
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: SPOTIFY_REDIRECT_URI,
+            code_verifier: verifier
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error_description || data.error || "Token exchange failed");
+        saveToken(data.access_token, data.expires_in);
+        sessionStorage.removeItem("cadence_pkce_verifier");
+        window.history.replaceState({}, document.title, SPOTIFY_REDIRECT_URI);
+        await loadSpotifyWorkspace();
+      } catch (error) {
+        console.error(error);
+        showToast(`Spotify login failed: ${error.message}`, "error");
+      }
+    }
+
+    function saveToken(token, expiresIn) {
+      state.accessToken = token;
+      state.tokenExpiresAt = Date.now() + (Number(expiresIn || 3600) * 1000);
+      sessionStorage.setItem("cadence_access_token", token);
+      sessionStorage.setItem("cadence_token_expires_at", String(state.tokenExpiresAt));
+    }
+
+    function restoreToken() {
+      const token = sessionStorage.getItem("cadence_access_token");
+      const expiry = Number(sessionStorage.getItem("cadence_token_expires_at") || 0);
+      if (token && expiry > Date.now() + 30000) {
+        state.accessToken = token;
+        state.tokenExpiresAt = expiry;
+        return true;
+      }
+      sessionStorage.removeItem("cadence_access_token");
+      sessionStorage.removeItem("cadence_token_expires_at");
+      return false;
+    }
+
+    async function spotifyRequest(endpoint, options = {}) {
+      if (!state.accessToken || state.tokenExpiresAt <= Date.now()) {
+        throw new Error("Your Spotify session expired. Please connect Spotify again.");
+      }
+      const response = await fetch(`${SPOTIFY_API}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${state.accessToken}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(options.headers || {})
+        }
+      });
+      if (response.status === 204) return null;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          state.accessToken = null;
+          sessionStorage.removeItem("cadence_access_token");
+          sessionStorage.removeItem("cadence_token_expires_at");
+        }
+        throw new Error(data?.error?.message || `Spotify API error (${response.status})`);
+      }
+      return data;
+    }
+
+    async function loadSpotifyWorkspace() {
+      if (!state.accessToken) return;
+      setStatus("Syncing Spotify…");
+      $("#storyStatus").textContent = "Loading your listening story…";
+      try {
+        const profile = await spotifyRequest("/me");
+        state.profile = profile;
+        const displayName = profile.display_name || profile.id || "YOU";
+        $("#profileAvatar").textContent = displayName.slice(0, 3).toUpperCase();
+        $("#profileAvatar").title = displayName;
+        setStatus(`Connected as ${displayName}`);
+        await Promise.allSettled([loadPlaylists(), loadListeningStory()]);
+        showToast("Spotify workspace synced.");
+      } catch (error) {
+        console.error(error);
+        setStatus("Spotify connection needs attention", true);
+        showToast(error.message, "error");
+      }
+    }
+
+    async function loadPlaylists() {
+      const data = await spotifyRequest("/me/playlists?limit=50");
+      state.playlists = data.items || [];
+      $("#overviewPlaylistCount").textContent = data.total ?? state.playlists.length;
+      renderPlaylists();
+      renderModalPlaylists();
+    }
+
+    function renderPlaylists() {
+      const target = $("#spotifyPlaylists");
+      if (!state.playlists.length) {
+        target.innerHTML = '<p>No playlists found in this account yet. Create one to get started.</p>';
+        return;
+      }
+      target.innerHTML = state.playlists.map((playlist) => `
+        <article class="music-card playlist-card">
+          <a href="${escapeHTML(playlist.external_urls?.spotify || "#")}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeHTML(playlist.name)} on Spotify">
+            <img src="${escapeHTML(imageFor(playlist))}" alt="${escapeHTML(playlist.name)} cover" loading="lazy">
+          </a>
+          <h3 title="${escapeHTML(playlist.name)}">${escapeHTML(playlist.name)}</h3>
+          <p>${Number(playlist.tracks?.total || 0)} tracks</p>
+          <div class="card-actions"><button type="button" data-open-url="${escapeHTML(playlist.external_urls?.spotify || "")}">Open</button></div>
+        </article>`).join("");
+      target.querySelectorAll("[data-open-url]").forEach((button) => button.addEventListener("click", () => openSpotify(button.dataset.openUrl)));
+    }
+
+    async function performMusicSearch(queryOverride) {
+      const query = String(queryOverride ?? $("#searchInput").value).trim();
+      if (!query) {
+        $("#searchResults").innerHTML = '<div class="status-message">Enter a song, artist, or album to discover music.</div>';
+        $("#discoveryContainer").innerHTML = '<div class="empty-state"><span class="empty-icon">♫</span><h3>What are you in the mood for?</h3><p>Search for a song, artist, or album above and discover something new.</p></div>';
+        return;
+      }
+      $("#searchInput").value = query;
+      $("#searchResults").innerHTML = '<div class="status-message">Searching Spotify…</div>';
+      $("#searchButton").disabled = true;
+      try {
+        if (!state.accessToken) {
+          $("#searchResults").innerHTML = '<div class="status-message">Connect Spotify first to search its catalogue.</div>';
+          showToast("Connect Spotify to search the catalogue.", "error");
+          return;
+        }
+        const params = new URLSearchParams({ q: query, type: "track,artist,album", limit: "8" });
+        const data = await spotifyRequest(`/search?${params.toString()}`);
+        const tracks = data.tracks?.items || [];
+        const artists = data.artists?.items || [];
+        const albums = data.albums?.items || [];
+        state.lastResults = tracks;
+        $("#searchResults").innerHTML = `<div class="status-message">Found ${tracks.length} tracks, ${artists.length} artists and ${albums.length} albums. Double-click a song card to open it on Spotify.</div>`;
+        renderTrackResults(tracks);
+        renderArtistResults(artists);
+      } catch (error) {
+        console.error(error);
+        $("#searchResults").innerHTML = `<div class="status-message">${escapeHTML(error.message)}</div>`;
+      } finally {
+        $("#searchButton").disabled = false;
+      }
+    }
+
+    function renderTrackResults(tracks) {
+      const target = $("#discoveryContainer");
+      if (!tracks.length) {
+        target.innerHTML = '<div class="empty-state"><span class="empty-icon">♫</span><h3>No tracks found</h3><p>Try a different search term.</p></div>';
+        return;
+      }
+      target.innerHTML = `<div class="results-grid">${tracks.map((track, index) => `
+        <article class="music-card track-card" data-track-index="${index}" tabindex="0" role="button" aria-label="Open ${escapeHTML(track.name)} on Spotify">
+          <img src="${escapeHTML(imageFor(track))}" alt="${escapeHTML(track.name)} cover" loading="lazy">
+          <h3 title="${escapeHTML(track.name)}">${escapeHTML(track.name)}</h3>
+          <p title="${escapeHTML(artistNames(track))}">${escapeHTML(artistNames(track))}</p>
+          <div class="card-actions"><button class="primary" type="button" data-track-open="${index}"><i class="fa-brands fa-spotify"></i> Open</button><button type="button" data-track-save="${index}" aria-label="Add ${escapeHTML(track.name)} to a playlist"><i class="fa-solid fa-plus"></i></button></div>
+        </article>`).join("")}</div>`;
+      target.querySelectorAll("[data-track-open]").forEach((button) => button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const track = state.lastResults[Number(button.dataset.trackOpen)];
+        setCurrentTrack(track);
+        openSpotify(track?.external_urls?.spotify);
+      }));
+      target.querySelectorAll("[data-track-save]").forEach((button) => button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const track = state.lastResults[Number(button.dataset.trackSave)];
+        openPlaylistModal(track);
+      }));
+      target.querySelectorAll(".track-card").forEach((card) => {
+        const choose = () => {
+          const track = state.lastResults[Number(card.dataset.trackIndex)];
+          setCurrentTrack(track);
+          openSpotify(track?.external_urls?.spotify);
+        };
+        card.addEventListener("dblclick", choose);
+        card.addEventListener("keydown", (event) => { if (event.key === "Enter") choose(); });
+      });
+    }
+
+    function renderArtistResults(artists) {
+      const target = $("#artistsContainer");
+      if (!artists.length) {
+        target.innerHTML = '<div class="empty-state"><span class="empty-icon">♫</span><h3>Your artist universe</h3><p>Search for music to discover artists.</p></div>';
+        return;
+      }
+      target.innerHTML = `<div class="results-grid">${artists.slice(0, 8).map((artist) => `
+        <article class="music-card">
+          <a href="${escapeHTML(artist.external_urls?.spotify || "#")}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(imageFor(artist))}" alt="${escapeHTML(artist.name)}" loading="lazy"></a>
+          <h3 title="${escapeHTML(artist.name)}">${escapeHTML(artist.name)}</h3>
+          <p>Artist · ${(artist.genres || []).slice(0, 2).map(escapeHTML).join(", ") || "Spotify artist"}</p>
+          <div class="card-actions"><button class="primary" type="button" data-artist-url="${escapeHTML(artist.external_urls?.spotify || "")}">View artist</button></div>
+        </article>`).join("")}</div>`;
+      target.querySelectorAll("[data-artist-url]").forEach((button) => button.addEventListener("click", () => openSpotify(button.dataset.artistUrl)));
+    }
+
+    function setCurrentTrack(track) {
+      if (!track) return;
+      state.selectedTrack = track;
+      $("#currentSongName").textContent = track.name || "Selected track";
+      $("#currentArtist").textContent = artistNames(track);
+      $("#currentTrack").textContent = track.name || "Selected track";
+      $("#playerArtistLabel").textContent = artistNames(track);
+      $("#trackDuration").textContent = track.duration_ms ? formatDuration(track.duration_ms) : "SPOTIFY";
+      const cover = $("#currentTrackCover");
+      cover.src = imageFor(track);
+      cover.hidden = false;
+      $("#playbackStatus").textContent = "Ready to open on Spotify";
+      $("#trackProgress").style.width = "12%";
+      $("#playButton").setAttribute("aria-pressed", "false");
+      $("#visualizer").classList.remove("is-playing");
+    }
+
+    function formatDuration(milliseconds) {
+      const seconds = Math.floor(milliseconds / 1000);
+      return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    }
+
+    function openPlaylistModal(track = null) {
+      state.selectedTrack = track || state.selectedTrack;
+      $("#playlistModalTitle").textContent = track ? "Add track to a playlist" : "New playlist";
+      $("#selectedTrack").innerHTML = track ? `<img src="${escapeHTML(imageFor(track))}" alt=""><div><strong>${escapeHTML(track.name)}</strong><span>${escapeHTML(artistNames(track))}</span></div>` : "";
+      $("#playlistNameInput").value = "";
+      $("#playlistDescriptionInput").value = "";
+      $("#createPlaylistConfirm").hidden = Boolean(track);
+      renderModalPlaylists();
+      $("#playlistModal").setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+    }
+
+    function closePlaylistModal() {
+      $("#playlistModal").setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+    }
+
+    function renderModalPlaylists() {
+      const target = $("#modalPlaylistList");
+      if (!state.accessToken) {
+        target.innerHTML = '<p>Connect Spotify to manage playlists.</p>';
+        return;
+      }
+      if (!state.playlists.length) {
+        target.innerHTML = '<p>No playlists loaded. Use Sync to refresh your library.</p>';
+        return;
+      }
+      target.innerHTML = state.playlists.map((playlist) => `<button type="button" data-playlist-id="${escapeHTML(playlist.id)}"><i class="fa-solid fa-list-music"></i><span>${escapeHTML(playlist.name)}</span></button>`).join("");
+      target.querySelectorAll("[data-playlist-id]").forEach((button) => button.addEventListener("click", async () => {
+        if (!state.selectedTrack) {
+          openSpotify(state.playlists.find((item) => item.id === button.dataset.playlistId)?.external_urls?.spotify);
+          return;
+        }
+        try {
+          const playlist = state.playlists.find((item) => item.id === button.dataset.playlistId);
+          if (!playlist) return;
+          await spotifyRequest(`/playlists/${encodeURIComponent(playlist.id)}/tracks`, {
+            method: "POST",
+            body: JSON.stringify({ uris: [state.selectedTrack.uri] })
+          });
+          showToast(`Added to ${playlist.name}.`);
+          closePlaylistModal();
+        } catch (error) {
+          console.error(error);
+          showToast(error.message, "error");
+        }
+      }));
+    }
+
+    async function createPlaylist() {
+      const name = $("#playlistNameInput").value.trim();
+      const description = $("#playlistDescriptionInput").value.trim();
+      if (!name) {
+        showToast("Enter a playlist name first.", "error");
+        $("#playlistNameInput").focus();
+        return;
+      }
+      if (!state.profile) {
+        showToast("Connect Spotify before creating a playlist.", "error");
+        return;
+      }
+      try {
+        await spotifyRequest(`/users/${encodeURIComponent(state.profile.id)}/playlists`, {
+          method: "POST",
+          body: JSON.stringify({ name, description, public: false })
+        });
+        showToast(`Playlist “${name}” created.`);
+        closePlaylistModal();
+        await loadPlaylists();
+      } catch (error) {
+        console.error(error);
+        showToast(error.message, "error");
+      }
+    }
+
+    async function loadListeningStory() {
+      if (!state.accessToken) return;
+      const range = $("#storyTimeRange").value;
+      $("#storyStatus").textContent = "Refreshing listening insights…";
+      const results = await Promise.allSettled([
+        spotifyRequest(`/me/top/artists?time_range=${range}&limit=5`),
+        spotifyRequest(`/me/top/tracks?time_range=${range}&limit=5`),
+        spotifyRequest("/me/player/recently-played?limit=5")
+      ]);
+      state.topArtists = results[0].status === "fulfilled" ? (results[0].value.items || []) : [];
+      state.topTracks = results[1].status === "fulfilled" ? (results[1].value.items || []) : [];
+      state.recentTracks = results[2].status === "fulfilled" ? (results[2].value.items || []) : [];
+      renderStoryList("#topArtistsStory", state.topArtists, "artist");
+      renderStoryList("#topTracksStory", state.topTracks, "track");
+      renderRecentStory();
+      $("#overviewArtistCount").textContent = state.topArtists.length || "—";
+      $("#overviewTrackCount").textContent = state.topTracks.length || "—";
+      $("#overviewMusicIdentity").textContent = state.topArtists[0]?.name || "Discovering";
+      $("#storySummary").innerHTML = `<div class="story-stat"><strong>${state.recentTracks.length}</strong><span>Recent tracks loaded</span></div><div class="story-stat"><strong>${state.topArtists.length}</strong><span>Top artists</span></div><div class="story-stat"><strong>${state.topTracks.length}</strong><span>Top tracks</span></div>`;
+      $("#storySubtitle").textContent = state.topArtists[0] ? `Your current top artist is ${state.topArtists[0].name}.` : "Explore your personal listening data from Spotify.";
+      $("#storyStatus").textContent = "Listening insights updated using the available Spotify account data.";
+    }
+
+    function renderStoryList(selector, items, kind) {
+      const target = $(selector);
+      if (!items.length) {
+        target.innerHTML = '<p class="story-empty">No data available for this section.</p>';
+        return;
+      }
+      target.innerHTML = items.map((item) => {
+        const title = kind === "artist" ? item.name : item.name;
+        const subtitle = kind === "artist" ? (item.genres || []).slice(0, 2).join(", ") || "Artist" : artistNames(item);
+        const url = item.external_urls?.spotify || "#";
+        return `<a class="story-item" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(imageFor(item))}" alt="" loading="lazy"><span class="story-item-details"><strong>${escapeHTML(title)}</strong><span>${escapeHTML(subtitle)}</span></span></a>`;
+      }).join("");
+    }
+
+    function renderRecentStory() {
+      const target = $("#recentlyPlayedStory");
+      if (!state.recentTracks.length) {
+        target.innerHTML = '<p class="story-empty">No recently played tracks returned.</p>';
+        return;
+      }
+      target.innerHTML = state.recentTracks.map((entry) => {
+        const track = entry.track;
+        return `<a class="story-item" href="${escapeHTML(track.external_urls?.spotify || "#")}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(imageFor(track))}" alt="" loading="lazy"><span class="story-item-details"><strong>${escapeHTML(track.name)}</strong><span>${escapeHTML(artistNames(track))}</span></span></a>`;
+      }).join("");
+    }
+
+    function scrollToSection(selector) {
+      const target = $(selector);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function attachEvents() {
+      $("#searchForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        performMusicSearch();
+      });
+      $("#startProjectBtn").addEventListener("click", () => {
+        scrollToSection("#library");
+        $("#searchInput").focus({ preventScroll: true });
+      });
+      $("#browseBtn").addEventListener("click", () => scrollToSection("#library"));
+      $("#spotifyLoginButton").addEventListener("click", loginWithSpotify);
+      $("#refreshPlaylists").addEventListener("click", async () => {
+        if (!state.accessToken) return showToast("Connect Spotify before syncing.", "error");
+        try { await loadPlaylists(); showToast("Playlists refreshed."); }
+        catch (error) { showToast(error.message, "error"); }
+      });
+      $("#newPlaylistBtn").addEventListener("click", () => openPlaylistModal(null));
+      $("#createPlaylistConfirm").addEventListener("click", createPlaylist);
+      $("#modalClose").addEventListener("click", closePlaylistModal);
+      $("#playlistModal").addEventListener("click", (event) => {
+        if (event.target === $("#playlistModal")) closePlaylistModal();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closePlaylistModal();
+      });
+      $("#playButton").addEventListener("click", () => {
+        if (state.selectedTrack?.external_urls?.spotify) {
+          openSpotify(state.selectedTrack.external_urls.spotify);
+        } else {
+          showToast("Search for a song and choose it first.", "error");
+        }
+      });
+      $("#refreshStoryButton").addEventListener("click", async () => {
+        if (!state.accessToken) return showToast("Connect Spotify to load insights.", "error");
+        try { await loadListeningStory(); showToast("Listening story refreshed."); }
+        catch (error) { showToast(error.message, "error"); }
+      });
+      $("#storyTimeRange").addEventListener("change", () => {
+        if (state.accessToken) loadListeningStory().catch((error) => showToast(error.message, "error"));
+      });
+      $("#overviewSearchAction").addEventListener("click", () => {
+        scrollToSection("#searchInput");
+        $("#searchInput").focus({ preventScroll: true });
+      });
+      $("#overviewPlaylistAction").addEventListener("click", () => scrollToSection("#playlists"));
+      $("#overviewStoryAction").addEventListener("click", () => scrollToSection("#stats"));
+      $("#overviewSyncAction").addEventListener("click", async () => {
+        if (!state.accessToken) return loginWithSpotify();
+        await loadSpotifyWorkspace();
+      });
+      $$(".genre-tile").forEach((button) => button.addEventListener("click", () => {
+        const genre = button.dataset.genre;
+        $("#searchInput").value = genre;
+        scrollToSection("#home");
+        performMusicSearch(genre);
+      }));
+      $$(".nav-link").forEach((link) => link.addEventListener("click", () => {
+        $$(".nav-link").forEach((item) => item.classList.toggle("active", item === link));
+      }));
+    }
+
+    async function init() {
+      attachEvents();
+      await exchangeAuthorizationCode();
+      if (restoreToken()) await loadSpotifyWorkspace();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+  <script src="js/config1.js"></script>
+<script src="js/auth1.js"></script>
+<script src="js/spotify1.js"></script>
+<script src="js/discovery1.js"></script>
+<script src="js/playback1.js"></script>
+<script src="js/playlists.js"></script>
+<script src="js/listening-story.js"></script>
+<script src="js/app1.js"></script>
+</body>
+</html>
